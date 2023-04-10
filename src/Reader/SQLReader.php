@@ -8,8 +8,9 @@ use Bumba\Sql2Migration\Reader\traits\indexExtractor;
 use Bumba\Sql2Migration\Reader\traits\schemaExtractor;
 use Bumba\Sql2Migration\Reader\traits\tableExtractor;
 
-
-
+/**
+ * A class that reads SQL statements from a file and extracts information about the schema and tables.
+ */
 abstract class SQLReader
 {
   use schemaExtractor,
@@ -22,13 +23,25 @@ abstract class SQLReader
   protected array $schemaInfo = [];
   protected string $currentTable = '';
 
+
+  /**
+   * Read and parse an array of SQL lines to extract schema, table, columns, indexes, and foreign keys.
+   *
+   * @param array $lines An array of SQL lines to parse.
+   *
+   * @throws \Exception if a primary key references a column that doesn't exist in the current table.
+   *
+   * @return void
+   */
   public function readLines(array $lines)
   {
 
     foreach ($lines as $i => $line) {
       $line = trim($line);
 
-      if (!strlen($line) || strpos('--', $line) === 0) continue;
+      if (!strlen($line) || strpos('--', $line) === 0) {
+        continue;
+      }
 
       if (stripos($line, 'CREATE SCHEMA') === 0) {
         $this->schemaInfo = $this->extractCurrentSchema($line);
@@ -49,7 +62,7 @@ abstract class SQLReader
 
         // column definition
         if (str_starts_with($line, '`')) {
-          $column  = $this->extractCurrentColumn($line);
+          $column = $this->extractCurrentColumn($line);
           $this->tables[$this->currentTable]['columns'][$column['name']] = $column;
         } else {
 
@@ -100,6 +113,7 @@ abstract class SQLReader
       }
     }
   }
+
 
   /**
    *@purpose help dbms tests

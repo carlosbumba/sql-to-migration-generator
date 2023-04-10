@@ -2,104 +2,150 @@
 
 namespace Bumba\Sql2Migration\Writer\traits;
 
+/**
+ * Responsible for parsing a given column array
+ * and generating the corresponding migration code for it.
+ *
+ * It takes in a schema array which defines how to parse each data type and modifier,
+ * and uses that schema to generate the appropriate function calls for each column.
+ *
+ * @package Bumba\Sql2Migration\Writer
+ */
 
 trait ColumnParser
 {
-  use SignatureParams, SchemaConvention;
+    use SignatureParams, SchemaConvention;
 
- 
-  protected function parseColumn(array $column)
-  {
-    $fn = $this->getSchemaFunctionForReplacement($column['datatype']);
-    $args = $this->getColumnArgsForReplacement($column);
+    protected function parseColumn(array $column)
+    {
+        // Get the schema function and arguments for the given column datatype
+        $fn = $this->getSchemaFunctionForReplacement($column['datatype']);
+        $args = $this->getColumnArgsForReplacement($column);
 
-    $column['modifiers-signatures'] = $this->getModifiersFunction($column['modifiers']);
+        // Get the function for the column modifiers
+        $column['modifiers-signatures'] = $this->getModifiersFunction($column['modifiers']);
 
-    // if there is a conventional way, get it
-    $this->tryGetSchemaConvention($column, $args);
+        // Try to get the signature using the conventional way, if available
+        $this->tryGetSchemaConvention($column, $args);
 
-    // if there is not
-    if (!isset($column['signature'])) {
-      $column['signature'] =  $this->replaceParams($args, $fn);
-    }
-
-    return $this->appendModifersToFinalSignature($column['modifiers-signatures'], $column['signature']);
-  }
-
-
-  protected function getSchemaFunctionForReplacement(string $datatype)
-  {
-    $fn = $this->schema['datatypes'][$datatype] ?? null;
-
-    if (is_null($fn)) {
-      throw new \Exception("DataType {$datatype} don't have a function in this schema");
-    }
-
-    return $fn;
-  }
-
-
-  protected function getColumnArgsForReplacement(array $column)
-  {
-    $args = [];
-
-    // insert datatype arguments
-    if (!empty($column['datatype-arg'])) {
-
-      if (in_array($column['datatype'], ['enum', 'set'])) {
-        $items = array_map(fn ($i) => is_int($i) ? "'{$i}'" : $i, $column['datatype-arg']);
-        $args[] = '[' . implode(', ', $items) . ']';
-      } else {
-        $args = is_array($column['datatype-arg']) ? [...$column['datatype-arg']] : [$column['datatype-arg']];
-      }
-    }
-
-    // insert column name at beginning of array
-    array_unshift($args, $column['str-name']);
-
-    return $args;
-  }
-
-
-  protected function tryGetSchemaConvention(array &$column, array $args)
-  {
-    if (!isset($this->schema['conventions']));
-
-    $convention = $this->getConventionByModifier($column) ?? $this->getConventionByDataType($column);
-
-    if ($convention) {
-      $column['signature'] = $this->replaceParams($args, $convention);
-    }
-  }
-
-
-  protected function getModifiersFunction(array $columnModifiers)
-  {
-    $result = [];
-
-    foreach ($columnModifiers as $modifer => $value) {
-      if (isset($this->schema['modifiers'][$modifer]) and $value) {
-        $fn = $this->schema['modifiers'][$modifer];
-
-        if ($value !== true) {
-
-          $fn = $this->replaceParams([$value], $fn);
+        // If the signature was not obtained conventionally, replace the arguments in the schema function
+        if (!isset($column['signature'])) {
+            $column['signature'] = $this->replaceParams($args, $fn);
         }
 
-        $result[$modifer] = $fn;
-      }
+        // Append the modifiers to the final signature
+        return $this->appendModifersToFinalSignature($column['modifiers-signatures'], $column['signature']);
     }
 
-    return $result;
-  }
-  
+/**
+ * Returns the schema function that corresponds to the given datatype.
+ *
+ * @param string $datatype The datatype to look for in the schema.
+ * @return callable The schema function for the given datatype.
+ * @throws \Exception If the datatype does not have a corresponding function in the schema.
+ */
+    protected function getSchemaFunctionForReplacement(string $datatype): callable
+    {
+        $fn = $this->schema['datatypes'][$datatype] ?? null;
 
-  protected function appendModifersToFinalSignature(array $modifiersSignature, string $columSignature)
-  {
-    $prefix = $this->schema['prefix'] ?? '$table->';
-    $separator = $this->schema['separator'] ?? '->';
-    $columSignature = $prefix . $columSignature;
-    $modifiers = count($modifiersSignature) ? $separator . implode($separator, array_values($modifiersSignature)) : '';
-    return $columSignature . $modifiers . ';';
-  }
+        if (is_null($fn)) {
+            throw new \Exception("DataType {$datatype} don't have a function in this schema");
+        }
+
+        return $fn;
+    }
+
+/**
+ * Get the arguments needed for the column replacement function
+ *
+ * @param array $column The column to get the arguments from
+ * @return array The arguments for the replacement function
+ */
+    protected function getColumnArgsForReplacement(array $column)
+    {
+        $args = [];
+
+        // insert datatype arguments
+        if (!empty($column['datatype-arg'])) {
+
+            if (in_array($column['datatype'], ['enum', 'set'])) {
+                $items = array_map(fn($i) => is_int($i) ? "'{$i}'" : $i, $column['datatype-arg']);
+                $args[] = '[' . implode(', ', $items) . ']';
+            } else {
+                $args = is_array($column['datatype-arg']) ? [...$column['datatype-arg']] : [$column['datatype-arg']];
+            }
+        }
+
+        // insert column name at beginning of array
+        array_unshift($args, $column['str-name']);
+
+        return $args;
+    }
+
+    /**
+     * Tries to get a schema convention for the given column and arguments, and sets the column signature if successful.
+     *
+     * @param array $column The column to get the convention for.
+     * @param array $args The arguments for the column signature.
+     * @return void
+     */
+    protected function tryGetSchemaConvention(array&$column, array $args)
+    {
+        // Check if the schema conventions are set
+        if (!isset($this->schema['conventions']));
+
+        // Try to get a convention by modifier, otherwise try to get a convention by data type
+        $convention = $this->getConventionByModifier($column) ?? $this->getConventionByDataType($column);
+
+        // If a convention is found, replace the column parameters with the convention and set the signature
+        if ($convention) {
+            $column['signature'] = $this->replaceParams($args, $convention);
+        }
+    }
+
+    /**
+     * Gets an associative array of modifier functions for a given set of column modifiers.
+     *
+     * @param array $columnModifiers The column modifiers to retrieve the functions for.
+     * @return array An associative array of modifier functions for the given column modifiers.
+     */
+    protected function getModifiersFunction(array $columnModifiers)
+    {
+        $result = [];
+
+        foreach ($columnModifiers as $modifer => $value) {
+            if (isset($this->schema['modifiers'][$modifer]) and $value) {
+                $fn = $this->schema['modifiers'][$modifer];
+
+                if ($value !== true) {
+                    $fn = $this->replaceParams([$value], $fn);
+                }
+
+                $result[$modifer] = $fn;
+            }
+        }
+
+        return $result;
+    }
+
+/**
+ * Appends the column modifiers to the final column signature.
+ *
+ * @param array $modifiersSignature An associative array where the keys represent the modifier names
+ *                                  and the values represent the modifier functions.
+ * @param string $columSignature    The column signature as generated by the getSchemaFunctionForReplacement method.
+ *
+ * @return string The final column signature with modifiers appended.
+ */
+    protected function appendModifersToFinalSignature(array $modifiersSignature, string $columSignature)
+    {
+        $prefix = $this->schema['prefix'] ?? '$table->';
+        $separator = $this->schema['separator'] ?? '->';
+
+        $columSignature = $prefix . $columSignature;
+        $modifiers = count($modifiersSignature) ? $separator . implode($separator, array_values($modifiersSignature)) : '';
+
+        return $columSignature . $modifiers . ';';
+    }
+
 }

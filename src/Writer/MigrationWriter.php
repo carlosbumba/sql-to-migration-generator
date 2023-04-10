@@ -7,6 +7,9 @@ use Bumba\Sql2Migration\Writer\traits\ForeignKeyParser;
 use Bumba\Sql2Migration\Writer\traits\IndexParser;
 use Bumba\Sql2Migration\Writer\traits\MigrationCreator;
 
+/**
+ * Abstract class for generating migration files.
+ */
 abstract class MigrationWriter
 {
   use ColumnParser, IndexParser, ForeignKeyParser, MigrationCreator;
@@ -16,19 +19,24 @@ abstract class MigrationWriter
   protected string $filename_template;
   protected string $outputDir;
 
-
   /**
-   * @return string
+   * Returns the output directory for the migration files.
+   *
+   * @return string The output directory.
    */
   public function getOutputDir(): string
   {
     return $this->outputDir;
   }
 
-
   /**
-   * @param string $outputDir 
+   * Sets the output directory for the migration files.
+   *
+   * @param string $outputDir The output directory.
+   * 
    * @return self
+   * 
+   * @throws \Exception If the output directory does not exist.
    */
   public function setOutputDir(string $outputDir): self
   {
@@ -40,7 +48,13 @@ abstract class MigrationWriter
     return $this;
   }
 
-
+  /**
+   * Generates the migration content for a given table.
+   *
+   * @param array $table The table schema.
+   * 
+   * @return string The migration content.
+   */
   protected function getMigrationContent(array $table)
   {
     $columns = $this->getStatments($table['columns'], 'parseColumn');
@@ -65,7 +79,13 @@ abstract class MigrationWriter
     return $content;
   }
 
-
+  /**
+   * Writes the migration files for the given tables.
+   *
+   * @param array $tables The array of tables to generate migration files for.
+   * 
+   * @return void
+   */
   public function write(array $tables)
   {
     foreach ($tables as $tablename => $table) {

@@ -5,20 +5,43 @@ namespace Bumba\Sql2Migration;
 use Bumba\Sql2Migration\Reader\SQLReader;
 use Bumba\Sql2Migration\Writer\MigrationWriter;
 
-
 /**
- * Undocumented class
- * 
- * 
+ * Class MigrationGenerator
+ *
+ * Class responsible for generating migration files from SQL source files.
+ *
+ * @package Bumba\Sql2Migration
  * @author carlos bumba <carlosbumbadev16@gmail.com>
  */
 class MigrationGenerator
 {
+  /**
+   * @var MigrationWriter $frameworkWriter The framework writer object responsible for writing the generated migration files.
+   */
   protected MigrationWriter $frameworkWriter;
+
+  /**
+   * @var SQLReader $DbmsReader The SQL reader object responsible for reading the SQL source file.
+   */
   protected SQLReader $DbmsReader;
+
+  /**
+   * @var string|null $sourceFile The path to the SQL source file.
+   */
   protected ?string $sourceFile = null;
+
+  /**
+   * @var string|null $outputPath The path to the output directory.
+   */
   protected ?string $outputPath = null;
 
+  /**
+   * MigrationGenerator constructor.
+   *
+   * @param string $framework The framework name for which migration files will be generated.
+   * @param string $readerType The type of SQL database for which migration files will be generated.
+   * @throws \Exception If the framework or SQL database type implementation is not found.
+   */
   public function __construct(string $framework, string $readerType = 'MySQL')
   {
     // framework implementation
@@ -41,7 +64,11 @@ class MigrationGenerator
     $this->DbmsReader = new $class;
   }
 
-
+  /**
+   * Generate migration files.
+   *
+   * @throws \Exception If the source file or output directory is not provided.
+   */
   public function generate()
   {
     if (is_null($this->sourceFile)) {
@@ -60,9 +87,10 @@ class MigrationGenerator
     $this->frameworkWriter->write($this->DbmsReader->getTables());
   }
 
-
   /**
-   * @return string
+   * Get the output path.
+   *
+   * @return string The output path.
    */
   public function getOutputPath(): string
   {
@@ -70,8 +98,11 @@ class MigrationGenerator
   }
 
   /**
-   * @param string $outputPath 
+   * Set the output path.
+   *
+   * @param string $outputPath The path to the output directory.
    * @return self
+   * @throws \Exception If the output directory does not exist.
    */
   public function setOutputPath(string $outputPath): self
   {
@@ -82,7 +113,7 @@ class MigrationGenerator
     $this->outputPath = $outputPath;
     return $this;
   }
-
+  
   /**
    * @return string
    */
