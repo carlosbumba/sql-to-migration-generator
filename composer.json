@@ -1,0 +1,27 @@
+{
+    "name": "bumba/sql2migration",
+    "description": "read sql string and convert to a migration",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Carlos Bumba",
+            "email": "carlosbumbadev16@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Bumba\\Sql2Migration\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Bumba\\Tests\\": "tests/"
+        }
+    },
+    "require": {},
+    "require-dev": {
+        "symfony/var-dumper": "^6.2",
+        "phpunit/phpunit": "^10.0"
+    }
+}
